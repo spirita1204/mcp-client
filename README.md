@@ -1,6 +1,6 @@
 # MCPClient Python Application
 
-This is a Python client application designed to interact with an MCP (Message Communication Protocol) server. The client uses an asynchronous approach to connect to the server, send queries, and manage interactions with available tools via the server's response. The client is also capable of executing server-side scripts (Python or JavaScript) and calling external tools, then processing the results.
+This is a Python client application designed to interact with an MCP (Model Context Protocol) server. 
 
 ## Features
 
