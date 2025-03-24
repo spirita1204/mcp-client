@@ -17,6 +17,7 @@ class MCPClient:
         self.session: Optional[ClientSession] = None  # MCP 會話對象
         self.exit_stack = AsyncExitStack()  # 用於管理異步上下文
         self.base_url = "http://localhost:11434"  # Ollama 服務地址
+        # self.base_url = "https://f0f5-118-233-3-110.ngrok-free.app"
         self.model = "llama3.2"  # 使用的 Ollama 模型名稱
 
     async def connect_to_server(self, server_script_path: str):
