@@ -10,4 +10,5 @@ dependencies = [
     "openai>=1.68.2",
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
+    "smithery>=0.1.1",
 ]

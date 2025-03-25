@@ -9,35 +9,26 @@ from mcp.client.stdio import stdio_client
 
 from dotenv import load_dotenv
 
-load_dotenv()  # 從 .env 文件加載環境變量
+# load_dotenv()  # 從 .env 文件加載環境變量
+
+# Load configuration
+with open("config.json", "r") as f:
+    config = json.load(f)
 
 class MCPClient:
-    def __init__(self):
+    def __init__(self, server_params: StdioServerParameters):
         # 初始化客戶端核心組件
         self.session: Optional[ClientSession] = None  # MCP 會話對象
         self.exit_stack = AsyncExitStack()  # 用於管理異步上下文
-        self.base_url = "http://localhost:11434"  # Ollama 服務地址
-        # self.base_url = "https://f0f5-118-233-3-110.ngrok-free.app"
-        self.model = "llama3.2"  # 使用的 Ollama 模型名稱
+        self.base_url = config["base_url"] # Ollama 服務地址
+        # self.base_url = config["base_url_ngrok"]
+        self.model = config["model"]  # 使用的 Ollama 模型名稱
+        self.server_params = server_params
 
-    async def connect_to_server(self, server_script_path: str):
-        """連接到 MCP 服務器腳本並初始化工具列表"""
-        # 確定服務器腳本類型
-        is_python = server_script_path.endswith('.py')
-        is_js = server_script_path.endswith('.js')
-        if not (is_python or is_js):
-            raise ValueError("服務器腳本必須是 .py 或 .js 文件")
-            
-        # 準備運行命令
-        command = "python" if is_python else "node"
-        server_params = StdioServerParameters(
-            command=command,
-            args=[server_script_path],
-            env=None
-        )
-        
+    async def connect_to_server(self):
+        """連接到 MCP 服務器腳本並初始化工具列表"""            
         # 建立標準輸入輸出通信通道
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(self.server_params))
         self.stdio, self.write = stdio_transport
         
         # 創建 MCP 會話
@@ -96,7 +87,7 @@ class MCPClient:
         try:
             # 發送 HTTP 請求到 Ollama 服務
             api_response = requests.post(
-                f"{self.base_url}/api/chat", 
+                f"{self.base_url}", 
                 json=ollama_payload
             )
             
@@ -143,7 +134,7 @@ class MCPClient:
                             
                             # 獲取 Ollama 對工具結果的後續回應
                             follow_up_response = requests.post(
-                                f"{self.base_url}/api/chat", 
+                                f"{self.base_url}", 
                                 json={
                                     "model": self.model,
                                     "messages": all_messages,
@@ -219,17 +210,31 @@ async def main():
     if len(sys.argv) < 2:
         print("用法: python client.py <服務器腳本路徑>")
         sys.exit(1)
-        
+
+    print("Starting MCP client...")
+    mcp_clients = []
+    
     # 創建客戶端實例
-    client = MCPClient()
-    try:
-        # 連接到 MCP 服務器
-        await client.connect_to_server(sys.argv[1])
-        # 啟動聊天界面
-        await client.chat_loop()
-    finally:
-        # 確保資源被正確釋放
-        await client.cleanup()
+    for server in config["mcp_servers"]:
+        print(f"Setting up server: {server['name']}")
+        server_params = StdioServerParameters(
+            # 服務器執行的命令，這裡是 python
+            command=server["command"],
+            # 啟動命令的附加参數
+            args=server["args"],
+            # 默認為 None，表示使用當前環境變量
+            env=server["env"],
+        )
+        client = MCPClient(server_params)
+        mcp_clients.append(client)
+        try:
+            # 連接到 MCP 服務器
+            await client.connect_to_server()
+            # 啟動聊天界面
+            await client.chat_loop()
+        finally:
+            # 確保資源被正確釋放
+            await client.cleanup()
 
 if __name__ == "__main__":
     import sys

@@ -1,0 +1,16 @@
+{
+    "model": "llama3.2",
+    "base_url": "http://localhost:11434/api/chat",
+    "base_url_ngrok": "https://f0f5-118-233-3-110.ngrok-free.app/api/chat",
+    "system_prompt": "You are a helpful assistant capable of accessing external tools and providing informative answers. Engage in a natural, friendly manner while using available tools for real-time information retrieval.\n\n# Tools\n{tools}\n\n# Notes\n- Responses should be based on the latest available data.\n- Maintain an engaging and friendly tone.\n- Highlight the usefulness of tools in assisting users comprehensively.",
+    "mcp_servers": [
+      {
+        "name": "weather",
+        "command": "python",
+        "args": [
+            "D:\\project\\weather\\weather.py"
+        ],
+        "env": null
+      }
+    ]
+  }
