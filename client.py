@@ -206,11 +206,6 @@ class MCPClient:
 
 async def main():
     """主程序入口點"""
-    # 檢查命令行參數
-    if len(sys.argv) < 2:
-        print("用法: python client.py <服務器腳本路徑>")
-        sys.exit(1)
-
     print("Starting MCP client...")
     mcp_clients = []
     
