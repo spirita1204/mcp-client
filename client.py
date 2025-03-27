@@ -20,8 +20,8 @@ class MCPClient:
         # 初始化客戶端核心組件
         self.session: Optional[ClientSession] = None  # MCP 會話對象
         self.exit_stack = AsyncExitStack()  # 用於管理異步上下文
-        self.base_url = config["base_url"] # Ollama 服務地址
-        # self.base_url = config["base_url_ngrok"]
+        # self.base_url = config["base_url"] # Ollama 服務地址
+        self.base_url = config["base_url_ngrok"]
         self.model = config["model"]  # 使用的 Ollama 模型名稱
         self.server_params = server_params
 
@@ -97,23 +97,19 @@ class MCPClient:
             
             # 解析 JSON 響應
             response_data = api_response.json()
-            print('[response_data] ' + json.dumps(response_data, indent=2))
+            print('[response_data] ' + json.dumps(response_data, indent=2, ensure_ascii=False))
             # 收集最終輸出
             final_text = []
             
             # 處理 Ollama 的回應內容
             if "message" in response_data and "content" in response_data["message"]:
                 assistant_message = response_data["message"]["content"]
-                final_text.append(assistant_message)
-                
-                # 嘗試從回應中提取工具調用
-                tool_calls = self._extract_tool_calls(assistant_message)
-                print('[tool_calls] ' + json.dumps(tool_calls, indent=2))
-                # 處理每個工具調用
-                if tool_calls:
-                    for tool_call in tool_calls:
-                        tool_name = tool_call.get("tool")
-                        tool_params = tool_call.get("parameters", {})
+                tool_call = json.loads(assistant_message)
+                if "tool" in tool_call and "parameters" in tool_call:
+                    # 處理每個工具調用
+                    if tool_call:
+                        tool_name = tool_call["tool"]
+                        tool_params = tool_call["parameters"]
                         
                         if tool_name:
                             # 執行 MCP 工具調用
@@ -176,6 +172,55 @@ class MCPClient:
                 
         return tool_calls
 
+    def _extract_tool_calls(self, message):
+        """從 LLM 回應中提取 JSON 格式的工具調用"""
+        tool_calls = []
+        
+        try:
+            # 直接嘗試解析 message 內容
+            if isinstance(message, str):
+                try:
+                    # 如果 message 是 JSON 字串
+                    data = json.loads(message)
+                except json.JSONDecodeError:
+                    # 如果不是直接的 JSON，回退到原始方法
+                    import re
+                    json_blocks = re.findall(r'```(?:json)?\s*(.*?)\s*```', message, re.DOTALL)
+                    
+                    for block in json_blocks:
+                        try:
+                            data = json.loads(block)
+                            if isinstance(data, dict) and "tool" in data:
+                                tool_calls.append(data)
+                        except json.JSONDecodeError:
+                            continue
+            
+            # 如果是字典且包含工具信息
+            elif isinstance(message, dict):
+                data = message
+            else:
+                return tool_calls
+
+            # 檢查是否是工具調用格式
+            if isinstance(data, dict) and "tool" in data:
+                tool_calls.append(data)
+            
+            # 檢查 message 對象中的 content
+            elif isinstance(data, dict) and "message" in data:
+                message_content = data.get("message", {})
+                if isinstance(message_content, dict) and "content" in message_content:
+                    try:
+                        tool_data = json.loads(message_content["content"])
+                        if isinstance(tool_data, dict) and "tool" in tool_data:
+                            tool_calls.append(tool_data)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+            
+        except Exception as e:
+            print(f"工具調用解析錯誤: {e}")
+        
+        return tool_calls
+    
     async def chat_loop(self):
         """運行交互式命令行聊天界面"""
         # 顯示歡迎信息
