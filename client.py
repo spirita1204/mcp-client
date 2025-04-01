@@ -19,6 +19,7 @@ with open("config.json", "r") as f:
 MODEL = config["model"] # 使用的 Ollama 模型名稱
 BASE_URL = config["base_url"] # Ollama 服務地址
 # BASE_URL = config["base_url_ngrok"]
+SYSTEM_PROMPT = config["system_prompt"]
 
 class MCPClient:
     def __init__(self, server_params: StdioServerParameters):
@@ -65,7 +66,38 @@ class MCPClient:
     async def cleanup(self):
         """清理所有資源和連接"""
         await self.exit_stack.aclose()
-        
+
+async def agent_loop(query: str, tools: dict, messages: List[dict] = None):
+    messages = messages or [
+        {"role": "system", "content": SYSTEM_PROMPT.format(
+            tools="\n- ".join(
+                [f"{t['name']}: {t['schema']['function']['description']}" for t in tools.values()]
+            )
+        )}
+    ]
+    messages.append({"role": "user", "content": query})
+
+    response = await client.chat.completions.create(
+        model=MODEL,
+        messages=messages,
+        tools=[t["schema"] for t in tools.values()] if tools else None,
+        max_tokens=4096,
+        temperature=0,
+    )
+
+    if response.choices[0].message.tool_calls:
+        for tool_call in response.choices[0].message.tool_calls:
+            arguments = json.loads(tool_call.function.arguments)
+            tool_result = await tools[tool_call.function.name]["callable"](**arguments)
+            messages.extend([
+                response.choices[0].message,
+                {"role": "tool", "tool_call_id": tool_call.id, "name": tool_call.function.name, "content": json.dumps(tool_result)},
+            ])
+        response = await client.chat.completions.create(model=MODEL, messages=messages)
+
+    messages.append({"role": "assistant", "content": response.choices[0].message.content})
+    return response.choices[0].message.content, messages
+ 
 async def process_query(query: str) -> str:
     """處理用戶查詢並調用適當的工具"""
     # 構建基本消息結構
