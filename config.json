@@ -1,23 +1,29 @@
 {
   "model": "llama3.2",
-  "base_url": "http://localhost:11434/api/chat",
-  "base_url_ngrok": "https://887f-118-233-3-110.ngrok-free.app/api/chat",
+  "api_key": "ollama",
+  "base_url": "https://71b3-118-233-3-110.ngrok-free.app/v1",
+
+  "model_qwen": "qwen/qwen-turbo",
+  "api_key_qwen": "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",
+  "base_url_qwen": "https://openrouter.ai/api/v1",
+
+  "base_url_ngrok": "https://f44a-118-233-3-110.ngrok-free.app/api/chat",
   "system_prompt": "You are a helpful assistant capable of accessing external tools and providing informative answers. Engage in a natural, friendly manner while using available tools for real-time information retrieval.\n\n# Tools\n{tools}\n\n# Notes\n- Responses should be based on the latest available data.\n- Maintain an engaging and friendly tone.\n- Highlight the usefulness of tools in assisting users comprehensively.",
   "mcp_servers": [
+    { 
+      "name": "mongo-mcp",
+      "command": "node", 
+      "args": [
+        "D:\\project\\mongodb-lens\\mongodb-lens.js",
+        "mongodb://localhost:27017/sample_airbnb?authSource=admin"
+      ],
+      "env": null
+    },
     {
       "name": "weather-mcp",
       "command": "python",
       "args": [
           "D:\\project\\weather\\weather.py"
-      ],
-      "env": null
-    },
-    { 
-      "name": "mongo-mcp",
-      "command": "node", 
-      "args": [
-        "D:\\project\\mongo-mcp\\dist\\index.js",
-        "mongodb://root:example@localhost:27017/test?authSource=admin"
       ],
       "env": null
     }
