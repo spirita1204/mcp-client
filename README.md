@@ -61,3 +61,4 @@ This is a Python client application designed to interact with an MCP (Model Cont
 2. The client sends the query to the server, which responds with available tools and information.
 3. If the server suggests using a weather tool, the client executes the tool with the necessary parameters and shows the result.
 4. The client continues the conversation based on the new information returned by the tool.
+https://github.com/furey/mongodb-lens
