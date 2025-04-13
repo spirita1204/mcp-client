@@ -4,7 +4,7 @@
   "base_url": "https://71b3-118-233-3-110.ngrok-free.app/v1",
 
   "model_qwen": "qwen/qwen-turbo",
-  "api_key_qwen": "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",
+  "api_key_qwen": "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",
   "base_url_qwen": "https://openrouter.ai/api/v1",
 
   "base_url_ngrok": "https://f44a-118-233-3-110.ngrok-free.app/api/chat",
@@ -15,7 +15,7 @@
       "command": "node", 
       "args": [
         "D:\\project\\mongodb-lens\\mongodb-lens.js",
-        "mongodb://localhost:27017/sample_airbnb?authSource=admin"
+        "mongodb://localhost:27017/ai-npc?authSource=admin"
       ],
       "env": null
     },
