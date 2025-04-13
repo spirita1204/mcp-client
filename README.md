@@ -23,8 +23,15 @@ This is a  MCP application designed to interact with external resources.
 ## Example Workflow
 
 1. The user enters a query like:
-    
     ```bash
+    http://127.0.0.1:8000/process_message
+    {
+        // 哈囉
+        // 我想知道我有哪些collections
+        // 幫我輸出隨便五個資料
+        "message": "幫我輸出隨便五個資料",
+        "session_id": "1"
+    }
     Question1: How is the weather in California today?
     Question2: What collections are available in the database?
     ```
