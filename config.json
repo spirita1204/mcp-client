@@ -4,7 +4,7 @@
   "base_url": "https://71b3-118-233-3-110.ngrok-free.app/v1",
 
   "model_qwen": "qwen/qwen-turbo",
-  "api_key_qwen": "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",
+  "api_key_qwen": "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",
   "base_url_qwen": "https://openrouter.ai/api/v1",
 
   "base_url_ngrok": "https://f44a-118-233-3-110.ngrok-free.app/api/chat",

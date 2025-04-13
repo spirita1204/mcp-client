@@ -22,6 +22,7 @@ class MCPClient:
         self.server_params = server_params
         self.session = None
         self._client = None
+        self.connected = False
 
     async def __aenter__(self):
         await self.connect()
@@ -41,6 +42,7 @@ class MCPClient:
         session = ClientSession(self.read, self.write)
         self.session = await session.__aenter__()
         await self.session.initialize()
+        self.connected = True
         print(f"Successfully connected to MCP server")
     #  MCP 伺服器獲取可用工具列表。
     async def get_available_tools(self):
@@ -150,3 +152,90 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+class MCPManager:
+    _instance = None
+    mcp_clients = []
+    tools = {}
+    initialized = False
+
+    @classmethod
+    async def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = MCPManager()
+            if not cls.initialized:
+                await cls._instance.initialize()
+        return cls._instance
+
+    async def initialize(self):  
+        try:
+            global config   
+            mcp_servers = config["mcp_servers"]
+            if not mcp_servers:
+                # Fallback for testing
+                with open("config.json", "r") as f:
+                    config = json.load(f)
+                mcp_servers = config["mcp_servers"]
+                
+            for server in mcp_servers:
+                try:
+                    server_params = StdioServerParameters(
+                        command=server["command"],
+                        args=server["args"],
+                        env=server["env"],
+                    )
+                    client = MCPClient(server_params)
+                    await client.connect()
+                    if client.connected:
+                        self.mcp_clients.append(client)
+                        tools_data = await client.get_available_tools()
+                        for tool in tools_data.tools:
+                            self.tools[tool.name] = {
+                                "name": tool.name,
+                                "callable": client.call_tool(tool.name),
+                                "schema": {
+                                    "type": "function",
+                                    "function": {
+                                        "name": tool.name,
+                                        "description": tool.description,
+                                        "parameters": tool.inputSchema,
+                                    },
+                                }
+                            }
+                except Exception as e:
+                    print(f"Error connecting to MCP server: {e}")
+                    continue   
+            MCPManager.initialized = True
+        except Exception as e:
+            print(f"Error initializing MCP Manager: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fall back to mock mode
+            self.use_mock = True
+            self.mcp_clients = []
+            self.tools = {}
+
+
+    async def process_message(self, message: str, session_id: str = None):
+        # Maintain message history per session
+        if not hasattr(self, '_message_histories'):
+            self._message_histories = {}
+        
+        if session_id not in self._message_histories:
+            self._message_histories[session_id] = [
+                {"role": "system", "content": SYSTEM_PROMPT.format(
+                    tools="\n- ".join(
+                        [f"{t['name']}: {t['schema']['function']['description']}" for t in self.tools.values()]
+                    ) if self.tools else "No tools available"
+                )}
+            ]
+        
+        messages = self._message_histories[session_id]
+        
+        # Call agent_loop with the current message and session history
+        response, updated_messages = await agent_loop(message, self.tools, messages)
+        
+        # Update the session history
+        self._message_histories[session_id] = updated_messages
+        
+        return response
